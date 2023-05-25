@@ -1,14 +1,27 @@
 import cdsapi
+import json
+import netCDF4 as nc
+import datetime
+import netcdftime
+from zipfile import ZipFile
+from sanitize_filename import sanitize
 
 # Stations list
-stations = [
-		{"id": 1, "name": "Abisko", "lat": 56, "lon": 12, "climate": 0 },
-		{"id": 2, "name": "Nuuk", "lat": 57, "lon": 13, "climate": 0 }
-	]
+stations = []
+with open("stations.json") as jsonFile:
+	jsonStations = json.load(jsonFile)
+	for station in jsonStations:
+		stations.append( {"Id": station["StationId"], "Name": station["StationName"], "Latitude": station["Latitude"], "Longitude": station["Longitude"], "climate": 0 } )
 
 c = cdsapi.Client()
 
 for station in stations:
+	print(station["Name"])
+	# N W S E
+	areaBox = [
+	            station["Latitude"], station["Longitude"], station["Latitude"]-0.001,
+	            station["Longitude"]+0.001
+		]
 
 	c.retrieve(
 	    'reanalysis-era5-land-monthly-means',
@@ -17,10 +30,7 @@ for station in stations:
 	        'variable': [
 	            '2m_temperature', 'skin_temperature', 'total_precipitation',
 	        ],
-	        'area': [
-	            station["lat"], station["lon"], station["lat"]-0.001,
-	            station["lon"]+0.001
-	        ],
+	        'area': areaBox,
 	        'format': 'netcdf.zip',
 	        'year': [
 	            '2019', '2020', '2021',
@@ -34,4 +44,32 @@ for station in stations:
 	        ],
 	        'time': '00:00',
 	    },
-	    station["name"] + 'download.netcdf.zip')
+	    sanitize(station["Name"] + '_download.netcdf.zip'))
+
+	# unzip and process
+	filename = sanitize(station["Name"] + "_download.netcdf.zip")
+	with ZipFile("./" + filename) as zipFile:
+		zipFile.extractall("./")
+	file = "./data.nc"
+	ds = nc.Dataset(file)
+
+	# show dataset info
+	print(ds)
+
+	# convert nc times hours since 1900 to datetime
+	nctime=ds['time'][:]
+	t_cal=ds['time'].calendar
+	t_unit = ds.variables['time'].units
+
+	converteddates = netcdftime.num2date(nctime,units = t_unit,calendar = t_cal)
+
+
+	precip = ds['tp'][:]
+	temp2m = ds['t2m'][:]
+	time = ds['time'][:]
+	for i in range(0, len(precip)):
+		print(converteddates[i].year)
+		print(converteddates[i].month)
+		print("Precipitation (m) / month total: " + str(precip[i][0][0][0]))
+		print("Air temperature, 2m (Deg C) / month average: " + str(temp2m[i][0][0][0]-273.15))
+
