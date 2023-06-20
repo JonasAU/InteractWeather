@@ -69,13 +69,24 @@ for station in stations:
 		      ).plot.line(title=station)
 		plt.ylabel('Precipitation')
 
-		locator = matplotlib.ticker.MultipleLocator(2)
+		locator = matplotlib.ticker.MultipleLocator(10)
 		plt.gca().xaxis.set_major_locator(locator)
 		formatter = matplotlib.ticker.StrMethodFormatter("{x:.0f}")
 		plt.gca().xaxis.set_major_formatter(formatter)
 
 		plt.savefig('plotLine' + sanitize(station) + '_precipitation.pdf')
 
+		pd.pivot_table(dfSeasonal.reset_index(),
+		       index='Year', columns="Season", values='averageTemperature'
+		      ).plot.line(title=station)
+		plt.ylabel('Temperature')
+
+		locator = matplotlib.ticker.MultipleLocator(10)
+		plt.gca().xaxis.set_major_locator(locator)
+		formatter = matplotlib.ticker.StrMethodFormatter("{x:.0f}")
+		plt.gca().xaxis.set_major_formatter(formatter)
+
+		plt.savefig('plotLine' + sanitize(station) + '_temperature.pdf')
 
 	except Exception as e:
 		print(f'Error plotting this station, continuing: {str(e)}')

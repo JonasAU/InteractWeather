@@ -38,10 +38,11 @@ with open("stationClimateERA5.csv", 'w', encoding="UTF8") as csvFile:
 		        ],
 		        'area': areaBox,
 		        'format': 'netcdf.zip',
-		        'year': [
-		            '2019', '2020', '2021',
-		            '2022', '2023',
-		        ],
+			'year': list(range(1950,2024)),
+#		        'year': [
+#		            '2019', '2020', '2021',
+#		            '2022', '2023',
+#		        ],
 		        'month': [
 		            '01', '02', '03',
 		            '04', '05', '06',
