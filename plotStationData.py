@@ -3,8 +3,11 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 from sanitize_filename import sanitize
+import sys
 
-df = pd.read_csv ('stationClimateERA5.csv')
+filename = sys.argv[1]
+print(filename)
+df = pd.read_csv (filename)
 
 years = df.Year.unique()
 stations = df.StationName.unique()
