@@ -56,6 +56,12 @@ for station in stations:
 		plt.ylabel('Air temperature 2m, deg C, monthly average')
 		plt.savefig('plotWMO' + sanitize(station) + '_temperature.pdf')
 
+		plot2 = pd.pivot_table(dfAll.reset_index(),
+		               index='Month', columns='Period', values='Air temperature 2m, deg C, monthly average'
+		              ).plot.bar(title=station)
+		plt.ylabel('Precipition, m, monthly total')
+		plt.savefig('plotWMO' + sanitize(station) + '_precipitation.pdf')
+
 		# recent years precipitation
 #		dfFilter = dfFilter.loc[dfFilter['Precipition, m, monthly total'] != '--']
 
