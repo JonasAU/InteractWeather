@@ -57,7 +57,7 @@ for station in stations:
 		plt.savefig('plotWMO' + sanitize(station) + '_temperature.pdf')
 
 		plot2 = pd.pivot_table(dfAll.reset_index(),
-		               index='Month', columns='Period', values='Air temperature 2m, deg C, monthly average'
+		               index='Month', columns='Period', values='Precipition, m, monthly total'
 		              ).plot.bar(title=station)
 		plt.ylabel('Precipition, m, monthly total')
 		plt.savefig('plotWMO' + sanitize(station) + '_precipitation.pdf')
