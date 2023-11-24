@@ -53,13 +53,13 @@ for station in stations:
 
 		plot1 = pd.pivot_table(dfAll.reset_index(),
 		               index='Month', columns='Period', values='Air temperature 2m, deg C, monthly average'
-		              ).plot.line(title=station, color=mycolors)
+		              ).plot.line(title=station, color=my_colors)
 		plt.ylabel('Air temperature 2m, deg C, monthly average')
 		plt.savefig('plotWMO' + sanitize(station) + '_temperature.pdf')
 
 		plot2 = pd.pivot_table(dfAll.reset_index(),
 		               index='Month', columns='Period', values='Precipition, m, monthly total'
-		              ).plot.line(title=station, color=mycolors)
+		              ).plot.line(title=station, color=my_colors)
 		plt.ylabel('Precipition, m, monthly total')
 		plt.savefig('plotWMO' + sanitize(station) + '_precipitation.pdf')
 
