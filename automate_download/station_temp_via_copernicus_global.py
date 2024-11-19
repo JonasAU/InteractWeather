@@ -101,7 +101,7 @@ with open("station_climate.csv", 'w', encoding="UTF8") as csvFile:
 			#csvWriter.writerow([station["Id"], station["Name"], station["Latitude"], station["Longitude"], measurementYear, measurementMonth, temp2m[i][0][0]-273.15, precip[i][0][0]])
 			csvWriter.writerow([station["Id"], station["Latitude"], station["Longitude"], measurementYear, measurementMonth, temp2m[i][0][0]-273.15, precip[i][0][0]])
 
-		break # temporarily
+		#break # temporarily
 
 		
 # upload climate data file using sftp
