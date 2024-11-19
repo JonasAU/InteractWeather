@@ -26,7 +26,9 @@ for station in jsonStations:
 c = cdsapi.Client()
 
 # loop stations, get data, extract from  netcdf, write to csv file
-csvHeader = ["StationID", "StationName", "Latitude", "Longitude", "Year", "Month", "Air temperature 2m, deg C, monthly average", "Precipition, m, monthly total"]
+#csvHeader = ["StationID", "StationName", "Latitude", "Longitude", "Year", "Month", "Air temperature 2m, deg C, monthly average", "Precipition, m, monthly total"]
+csvHeader = ["StationID", "Latitude", "Longitude", "Year", "Month", "Air temperature 2m, deg C, monthly average", "Precipition, m, monthly total"]
+
 with open("station_climate.csv", 'w', encoding="UTF8") as csvFile:
 	csvWriter = csv.writer(csvFile)
 	csvWriter.writerow(csvHeader)
