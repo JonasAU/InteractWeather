@@ -1,13 +1,15 @@
 import cdsapi
 import json
 import netCDF4 as nc
+#import h5netcdf.legacyapi as nc
 from datetime import datetime
 import netcdftime
 import csv
 from zipfile import ZipFile
-from sanitize_filename import sanitize
+from pathvalidate import sanitize_filename
 import requests
 import paramiko
+import shutil
 
 # Stations list
 #stations = []
@@ -29,7 +31,7 @@ c = cdsapi.Client()
 #csvHeader = ["StationID", "StationName", "Latitude", "Longitude", "Year", "Month", "Air temperature 2m, deg C, monthly average", "Precipition, m, monthly total"]
 csvHeader = ["StationID", "Latitude", "Longitude", "Year", "Month", "Air temperature 2m, deg C, monthly average", "Precipition, m, monthly total"]
 
-with open("station_climate.csv", 'w', encoding="UTF8") as csvFile:
+with open("station_climate.csv", 'w', encoding="UTF8", newline='') as csvFile:
 	csvWriter = csv.writer(csvFile)
 	csvWriter.writerow(csvHeader)
 	for station in stations:
@@ -42,7 +44,8 @@ with open("station_climate.csv", 'w', encoding="UTF8") as csvFile:
 		if station['HasClimateData'] != True:
 			yearRange = list(range(1950,2024))
 
-		filename = sanitize(station["Name"] + "_download.nc")
+		simplifiedName = ''.join(letter for letter in station["Name"] if letter.isalnum() or letter == ' ')
+		filename = sanitize_filename(simplifiedName + "_download.nc.zip")
 		# N W S E
 		areaBox = [
 		            station["Latitude"], station["Longitude"], station["Latitude"]-0.001,
@@ -57,7 +60,8 @@ with open("station_climate.csv", 'w', encoding="UTF8") as csvFile:
 		            '2m_temperature', 'total_precipitation',
 		        ],
 		        'area': areaBox,
-		        'format': 'netcdf',
+    			'data_format': 'netcdf',
+    			'download_format': 'zip',
 #			'year': list(range(1950,2024)),
 		        'year': yearRange,
 		        'month': [
@@ -70,12 +74,21 @@ with open("station_climate.csv", 'w', encoding="UTF8") as csvFile:
 		    },
 		    filename)
 
-		# process netcdf
+		# copy zip
+		filenameID = str(station["Id"]) + "_download.nc.zip"
+		shutil.copyfile(filename, filenameID)		
 
-		ds = nc.Dataset(filename)
+		# unzip and process
+		with ZipFile("./" + filenameID) as zipFile:
+				zipFile.extractall("./" + str(station["Id"]))
+		file_t2m = "./" + str(station["Id"]) + "/data_0.nc"
+		file_tp = "./" + str(station["Id"]) +  "/data_1.nc"
+		ds_t2m = nc.Dataset(file_t2m)
+		ds_tp = nc.Dataset(file_tp)		
 
 		# show dataset info
-		print(ds)
+		print(ds_t2m)
+		print(ds_tp)
 
 		# convert nc times hours since 1900 to datetime
 		#--nctime=ds['time'][:]
@@ -85,21 +98,27 @@ with open("station_climate.csv", 'w', encoding="UTF8") as csvFile:
 		#--converteddates = netcdftime.num2date(nctime,units = t_unit,calendar = t_cal)
 
 
-		precip = ds['tp'][:]
-		temp2m = ds['t2m'][:]
-		#--time = ds['time'][:]
-		date=ds['date'][:]
+		precip = ds_tp['tp'][:]
+		temp2m = ds_t2m['t2m'][:]
+		#--time = ds['time'][:]		
+
+		# convert nc times hours since 1900 to datetime
+		nctime = ds_t2m['valid_time'][:]
+		t_cal = ds_t2m['valid_time'].calendar
+		t_unit = ds_t2m.variables['valid_time'].units
+
+		converteddates = netcdftime.num2date(nctime,units = t_unit,calendar = t_cal)		
 
 		# write to csv
 		for i in range(0, len(precip)):
-			measurementYear = datetime.strptime(str(date[i]), '%Y%m%d').year
-			measurementMonth = datetime.strptime(str(date[i]), '%Y%m%d').month
+			measurementYear = str(converteddates[i].year)
+			measurementMonth = str(converteddates[i].month)
 			print(measurementYear)
 			print(measurementMonth)
-			print("Precipitation (m) / month total: " + str(precip[i][0][0]))
-			print("Air temperature, 2m (Deg C) / month average: " + str(temp2m[i][0][0]-273.15))
+			print("Precipitation (m) / month total: " + str(precip[i]))
+			print("Air temperature, 2m (Deg C) / month average: " + str(temp2m[i]-273.15))
 			#csvWriter.writerow([station["Id"], station["Name"], station["Latitude"], station["Longitude"], measurementYear, measurementMonth, temp2m[i][0][0]-273.15, precip[i][0][0]])
-			csvWriter.writerow([station["Id"], station["Latitude"], station["Longitude"], measurementYear, measurementMonth, temp2m[i][0][0]-273.15, precip[i][0][0]])
+			csvWriter.writerow([station["Id"], station["Latitude"], station["Longitude"], measurementYear, measurementMonth, temp2m[i]-273.15, precip[i]])
 
 		#break # temporarily
 
@@ -112,4 +131,4 @@ with paramiko.SSHClient() as ssh:
 	ssh.connect('io.erda.au.dk', username='jZxlrPK5er', password='jZxlrPK5er', port=2222, allow_agent=False)
 
 	sftp = ssh.open_sftp()
-	sftp.put('station_climate.csv', 'station_climate_testupload.csv')
+	sftp.put('station_climate.csv', 'station_climate.csv')
