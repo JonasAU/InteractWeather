@@ -20,10 +20,10 @@ import shutil
 
 # Stations list via openapi
 stations = []
-response = requests.get("https://interact-gis.stage.its.umu.se/api/StationList")
+response = requests.get("https://interact-gis.org/api/external/stationinformation")
 jsonStations = response.json()
 for station in jsonStations:
-	stations.append( {"Id": station["StationId"], "Name": station["StationName"], "Latitude": station["Latitude"], "Longitude": station["Longitude"], "HasClimateData": station["HasClimateData"] } )
+	stations.append( {"Id": station["StationId"], "Name": station["StationName"], "Latitude": station["Information"]["Latitude"], "Longitude": station["Information"]["Longitude"], "HasClimateData": station["Information"]["HasClimateData"] } )
 
 c = cdsapi.Client()
 
