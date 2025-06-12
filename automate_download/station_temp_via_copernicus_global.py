@@ -10,6 +10,7 @@ from pathvalidate import sanitize_filename
 import requests
 import paramiko
 import shutil
+import pandas as pd
 
 # Stations list
 #stations = []
@@ -23,7 +24,9 @@ stations = []
 response = requests.get("https://interact-gis.org/api/external/stationinformation")
 jsonStations = response.json()
 for station in jsonStations:
-	stations.append( {"Id": station["StationId"], "Name": station["StationName"], "Latitude": station["Information"]["Latitude"], "Longitude": station["Information"]["Longitude"], "HasClimateData": station["Information"]["HasClimateData"] } )
+	print(station["Information"]["Latitude"])
+	print(station["Information"]["Longitude"])
+	stations.append( {"Id": station["StationId"], "Name": station["StationName"], "Latitude": float(station["Information"]["Latitude"]), "Longitude": float(station["Information"]["Longitude"]), "HasClimateData": station["Information"]["HasClimateData"] } )
 
 c = cdsapi.Client()
 
@@ -41,8 +44,8 @@ with open("station_climate.csv", 'w', encoding="UTF8", newline='') as csvFile:
 		yearRange = [
 		            '{0}'.format(datetime.now().year-1), '{0}'.format(datetime.now().year)
 		        ]
-		if station['HasClimateData'] != True:
-			yearRange = list(range(1950,2024))
+		if station['HasClimateData'] != "True" and station['HasClimateData'] != True:
+			yearRange = list(range(1950, datetime.now().year+1))
 
 		simplifiedName = ''.join(letter for letter in station["Name"] if letter.isalnum() or letter == ' ')
 		filename = sanitize_filename(simplifiedName + "_download.nc.zip")
@@ -79,12 +82,24 @@ with open("station_climate.csv", 'w', encoding="UTF8", newline='') as csvFile:
 		shutil.copyfile(filename, filenameID)		
 
 		# unzip and process
+		stationPath = "./" + str(station["Id"])
 		with ZipFile("./" + filenameID) as zipFile:
-				zipFile.extractall("./" + str(station["Id"]))
-		file_t2m = "./" + str(station["Id"]) + "/data_0.nc"
-		file_tp = "./" + str(station["Id"]) +  "/data_1.nc"
-		ds_t2m = nc.Dataset(file_t2m)
-		ds_tp = nc.Dataset(file_tp)		
+				zipFile.extractall(stationPath)
+		ncFiles = zipFile.namelist()
+		print("Extracted files: " + str(ncFiles))
+		file_1 = "./" + str(station["Id"]) + "/" + ncFiles[0]
+		file_2 = "./" + str(station["Id"]) + "/" + ncFiles[1]
+		ds_1 = nc.Dataset(file_1)
+		ds_2 = nc.Dataset(file_2)		
+		try:
+			testvar = ds_1["tp"]
+			ds_tp = ds_1
+			ds_t2m = ds_2
+		except:
+			testvar = ds_2["tp"]
+			ds_tp = ds_2
+			ds_t2m = ds_1
+
 
 		# show dataset info
 		print(ds_t2m)
@@ -102,12 +117,15 @@ with open("station_climate.csv", 'w', encoding="UTF8", newline='') as csvFile:
 		temp2m = ds_t2m['t2m'][:]
 		#--time = ds['time'][:]		
 
-		# convert nc times hours since 1900 to datetime
+		# convert nc times to datetime
 		nctime = ds_t2m['valid_time'][:]
 		t_cal = ds_t2m['valid_time'].calendar
 		t_unit = ds_t2m.variables['valid_time'].units
-
-		converteddates = netcdftime.num2date(nctime,units = t_unit,calendar = t_cal)		
+		print("Time unit: " + t_unit)
+		print("Time calendar: " + t_cal)
+		converteddates = pd.to_datetime(nctime, unit='s') # Datetime
+		#netcdftime.num2date(nctime,units = t_unit,calendar = t_cal)		
+		print(converteddates)
 
 		# write to csv
 		for i in range(0, len(precip)):
@@ -118,7 +136,7 @@ with open("station_climate.csv", 'w', encoding="UTF8", newline='') as csvFile:
 			print("Precipitation (m) / month total: " + str(precip[i]))
 			print("Air temperature, 2m (Deg C) / month average: " + str(temp2m[i]-273.15))
 			#csvWriter.writerow([station["Id"], station["Name"], station["Latitude"], station["Longitude"], measurementYear, measurementMonth, temp2m[i][0][0]-273.15, precip[i][0][0]])
-			csvWriter.writerow([station["Id"], station["Latitude"], station["Longitude"], measurementYear, measurementMonth, temp2m[i]-273.15, precip[i]])
+			csvWriter.writerow([station["Id"], station["Latitude"], station["Longitude"], measurementYear, measurementMonth, str(temp2m[i]-273.15).replace('[[', '').replace(']]', ''), str(precip[i]).replace('[[', '').replace(']]', '')])
 
 		#break # temporarily
 
